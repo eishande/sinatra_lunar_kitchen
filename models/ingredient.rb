@@ -1,15 +1,3 @@
-require 'pg'
-require 'pry'
-
-def db_connection
-  begin
-    connection = PG.connect(dbname: "recipes")
-    yield(connection)
-  ensure
-    connection.close
-  end
-end
-
 class Ingredient
   attr_reader :id, :name, :recipe_id
 
@@ -25,12 +13,20 @@ class Ingredient
     @ingredients
   end
 
-  db_connection do |conn|
-    $all_ingredients = conn.exec("SELECT id, name, recipe_id FROM ingredients")
-    $all_ingredients = $all_ingredients.to_a
+  def self.db_connection
+    begin
+      connection = PG.connect(dbname: "recipes")
+      yield(connection)
+    ensure
+      connection.close
+    end
   end
 
-  $all_ingredients.each do |row|
+  all_ingredients = self.db_connection do |conn|
+    conn.exec("SELECT id, name, recipe_id FROM ingredients")
+  end.to_a
+
+  all_ingredients.each do |row|
     @ingredients << Ingredient.new(row["id"], row["name"], row["recipe_id"])
   end
 
